@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Livoz | Cada palavra, uma nova descoberta.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand-bar">
+        <div class="brand-logo">L</div>
+        <div>
+          <div class="brand-title">Livoz</div>
+          <p class="brand-subtitle">Cada palavra, uma nova descoberta.</p>
+        </div>
+      </div>
+      <button class="ghost-btn header-action" data-action="open-menu">☰</button>
+    </header>
+
+    <main class="app-content">
+      <section class="screen screen-active" data-screen="opening">
+        <div class="hero-panel">
+          <div class="hero-badge">Para mães, pais e pequenos exploradores</div>
+          <h1>Aprender idiomas com carinho e diversão.</h1>
+          <p>O Livoz é uma plataforma infantil com identidade visual alegre, missões gamificadas e pesquisas seguras para família.</p>
+          <div class="hero-actions">
+            <button class="primary-btn" data-navigate="login">Entrar</button>
+            <button class="secondary-btn" data-navigate="responsible-signup">Criar conta</button>
+          </div>
+          <div class="hero-mascot">🦊</div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="login">
+        <div class="screen-card">
+          <div class="screen-title">
+            <h2>Entrar no Livoz</h2>
+            <p>Entre como responsável para gerenciar o perfil infantil.</p>
+          </div>
+          <form class="form-stack" data-form="login">
+            <label class="form-field">
+              <span>Email do responsável</span>
+              <input type="email" placeholder="seu@email.com" required>
+            </label>
+            <label class="form-field">
+              <span>Senha</span>
+              <input type="password" placeholder="********" required>
+            </label>
+            <button type="submit" class="primary-btn full-width">Entrar</button>
+          </form>
+          <p class="form-note">Ainda não tem conta? <button class="link-btn" data-navigate="responsible-signup">Cadastre-se</button></p>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="responsible-signup">
+        <div class="screen-card">
+          <div class="screen-title">
+            <h2>Cadastro do responsável</h2>
+            <p>Crie o controle familiar com segurança e simplicidade.</p>
+          </div>
+          <form class="form-stack" data-form="responsible-signup">
+            <label class="form-field">
+              <span>Nome completo</span>
+              <input type="text" placeholder="Maria Silva" required>
+            </label>
+            <label class="form-field">
+              <span>Email</span>
+              <input type="email" placeholder="maria@email.com" required>
+            </label>
+            <label class="form-field">
+              <span>Telefone</span>
+              <input type="tel" placeholder="(11) 9 9999-9999" required>
+            </label>
+            <label class="form-field">
+              <span>Senha</span>
+              <input type="password" placeholder="Crie uma senha" required>
+            </label>
+            <button type="submit" class="primary-btn full-width">Continuar</button>
+          </form>
+          <p class="form-note">Tem criança? <button class="link-btn" data-navigate="child-signup">Cadastrar criança</button></p>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="child-signup">
+        <div class="screen-card">
+          <div class="screen-title">
+            <h2>Cadastro da criança</h2>
+            <p>Criar um perfil divertido para aprender em família.</p>
+          </div>
+          <form class="form-stack" data-form="child-signup">
+            <label class="form-field">
+              <span>Nome da criança</span>
+              <input type="text" placeholder="Ana" required>
+            </label>
+            <label class="form-field">
+              <span>Idade</span>
+              <input type="number" min="6" max="14" placeholder="10" required>
+            </label>
+            <label class="form-field">
+              <span>Idioma preferido</span>
+              <select>
+                <option>Inglês</option>
+                <option>Espanhol</option>
+                <option>Francês</option>
+              </select>
+            </label>
+            <button type="submit" class="primary-btn full-width">Pronto para aprender</button>
+          </form>
+          <p class="form-note">Voltar para <button class="link-btn" data-navigate="responsible-signup">responsável</button></p>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="dashboard">
+        <div class="dashboard-top">
+          <div class="card-banner">
+            <div>
+              <span class="badge">Olá, Ana!</span>
+              <h2>Hoje é dia de explorar inglês!</h2>
+              <p>Missões, conversas e recompensas para crescer com confiança.</p>
+            </div>
+            <div class="mascot-circle">🦊</div>
+          </div>
+          <div class="progress-card component-card">
+            <div class="progress-header">
+              <div>
+                <h3>Progresso semanal</h3>
+                <p>Avanço de desafios</p>
+              </div>
+              <strong>62%</strong>
+            </div>
+            <div class="progress-track"><span style="width: 62%;"></span></div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <div>
+            <h3>Missões de hoje</h3>
+            <p>Escolha uma atividade divertida.</p>
+          </div>
+          <button class="link-btn" data-navigate="missions">Ver tudo</button>
+        </div>
+
+        <div class="mission-grid">
+          <article class="mission-card blue">
+            <div class="icon">🎙️</div>
+            <h4>Falar comigo</h4>
+            <p>Converse em inglês com a Livoz.</p>
+          </article>
+          <article class="mission-card cyan">
+            <div class="icon">🧩</div>
+            <h4>Palavras novas</h4>
+            <p>Aprenda 5 palavras brincando.</p>
+          </article>
+          <article class="mission-card yellow">
+            <div class="icon">📚</div>
+            <h4>História curta</h4>
+            <p>Ouça e responda em inglês.</p>
+          </article>
+          <article class="mission-card orange">
+            <div class="icon">🏆</div>
+            <h4>Prova Desafio</h4>
+            <p>Ganhe recompensas pela missão.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="missions">
+        <div class="screen-card">
+          <div class="screen-title">
+            <h2>Missões</h2>
+            <p>Selecione sua próxima aventura de aprendizagem.</p>
+          </div>
+          <div class="mission-list">
+            <article class="mission-big blue">
+              <div>
+                <strong>🎙️ Conversa divertida</strong>
+                <p>Pratique frases simples e ganhe estrelas.</p>
+              </div>
+              <span>Iniciar</span>
+            </article>
+            <article class="mission-big cyan">
+              <div>
+                <strong>🧠 Jogo de palavras</strong>
+                <p>Monte pares e aprenda vocabulário novo.</p>
+              </div>
+              <span>Jogar</span>
+            </article>
+            <article class="mission-big yellow">
+              <div>
+                <strong>📖 Minhistória</strong>
+                <p>Leia e responda perguntas simples.</p>
+              </div>
+              <span>Ouvir</span>
+            </article>
+            <article class="mission-big orange">
+              <div>
+                <strong>🏅 Desafio rápido</strong>
+                <p>Complete em 5 minutos e conquiste medalhas.</p>
+              </div>
+              <span>Começar</span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="chat">
+        <div class="screen-card chat-screen">
+          <div class="screen-title">
+            <h2>Conversa</h2>
+            <p>Simulação de chat divertido com a Livoz.</p>
+          </div>
+          <div class="chat-box">
+            <div class="chat-message bot">
+              <span>Olá, Ana! Pronta para aprender uma palavra nova?</span>
+            </div>
+            <div class="chat-message user">
+              <span>Sim! Quero aprender agora.</span>
+            </div>
+            <div class="chat-message bot">
+              <span>Que tal começarmos com <strong>apple</strong>?</span>
+            </div>
+          </div>
+          <form class="chat-form" data-form="chat">
+            <input type="text" placeholder="Escreva sua mensagem..." autocomplete="off" required>
+            <button type="submit">Enviar</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="benefits">
+        <div class="screen-card">
+          <div class="screen-title">
+            <h2>Benefícios</h2>
+            <p>Opções educativas pensadas para famílias e alunos.</p>
+          </div>
+          <div class="benefits-grid">
+            <article class="benefit-card">
+              <div class="benefit-icon" style="background: #E9FBF7; color: #22C7D6;">💚</div>
+              <div class="benefit-header">
+                <h3>Bolsa Socioeducativa</h3>
+                <p>Gratuidade total para famílias de baixa renda comprovada.</p>
+              </div>
+            </article>
+            <article class="benefit-card">
+              <div class="benefit-icon" style="background: #EEF3FF; color: #1E73F8;">🎓</div>
+              <div class="benefit-header">
+                <h3>Mérito Bimestral</h3>
+                <p>Desconto ou gratuidade pela média geral do boletim.</p>
+              </div>
+            </article>
+            <article class="benefit-card">
+              <div class="benefit-icon" style="background: #FFF8E5; color: #FF861C;">🏅</div>
+              <div class="benefit-header">
+                <h3>Prova Desafio</h3>
+                <p>Benefício mensal pela nota de prova ou atividade específica.</p>
+              </div>
+            </article>
+            <article class="benefit-card">
+              <div class="benefit-icon" style="background: #FFEAF3; color: #FF6B8A;">🔓</div>
+              <div class="benefit-header">
+                <h3>Modo Gratuito</h3>
+                <p>Acesso limitado enquanto a análise está pendente ou sem comprovação.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-link active" data-navigate="dashboard"><span>🏠</span>Início</button>
+      <button class="nav-link" data-navigate="chat"><span>💬</span>Conversa</button>
+      <button class="nav-link" data-navigate="missions"><span>🎯</span>Missões</button>
+      <button class="nav-link" data-navigate="benefits"><span>🎁</span>Benefícios</button>
+    </nav>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
