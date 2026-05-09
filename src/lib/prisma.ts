@@ -11,8 +11,20 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL não configurada. Defina a URL do PostgreSQL no arquivo .env.");
   }
 
-  const adapter = new PrismaPg({ connectionString });
+  const adapter = new PrismaPg({
+    connectionString: removePgSslParams(connectionString),
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
   return new PrismaClient({ adapter });
+}
+
+function removePgSslParams(connectionString: string) {
+  const url = new URL(connectionString);
+  url.searchParams.delete("sslmode");
+  url.searchParams.delete("sslaccept");
+  return url.toString();
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();

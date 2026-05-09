@@ -1,4 +1,4 @@
-import { getChild, getSession, getUser, setSession } from "@/lib/localStorage";
+import { getSession } from "@/lib/storage";
 
 export function createId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -6,29 +6,18 @@ export function createId(prefix: string) {
 
 export function isAuthenticated() {
   const session = getSession();
-  const user = getUser();
-  return Boolean(session?.userId && user?.id === session.userId);
+  return Boolean(session.userId);
 }
 
 export function hasCompleteProfile() {
-  return Boolean(isAuthenticated() && getChild());
+  const session = getSession();
+  return Boolean(isAuthenticated() && session.childId);
 }
 
 export function loginWithMockCredentials(email: string, password: string) {
-  const user = getUser();
-
   if (!email || !password) {
     return { ok: false, message: "Preencha e-mail e senha para entrar." };
   }
 
-  if (!user) {
-    return { ok: false, message: "Ainda não encontramos uma conta. Faça o cadastro primeiro." };
-  }
-
-  if (user.email.toLowerCase() !== email.toLowerCase()) {
-    return { ok: false, message: "Esse e-mail não está cadastrado no Livoz." };
-  }
-
-  setSession(user.id);
-  return { ok: true, message: "Tudo certo!" };
+  return { ok: false, message: "Use o login conectado ao banco de dados." };
 }
