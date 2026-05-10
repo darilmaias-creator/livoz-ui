@@ -43,6 +43,15 @@ type ProfileResponse = {
   user?: ProfileUser;
 };
 
+type PrivacyRequestType = "DATA_CORRECTION" | "ACCOUNT_DELETION" | "CHILD_DATA_DELETION";
+
+type PrivacyRequestResponse = {
+  message?: string;
+  privacyRequest?: {
+    id: string;
+  };
+};
+
 function languageLabel(language?: string) {
   if (language === "english") return "Inglês";
   if (language === "spanish") return "Espanhol";
@@ -61,6 +70,9 @@ export default function ProfilePage() {
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [benefitEndsAt, setBenefitEndsAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [privacyRequestLoading, setPrivacyRequestLoading] = useState<PrivacyRequestType | "">("");
+  const [privacyRequestSuccess, setPrivacyRequestSuccess] = useState("");
+  const [privacyRequestError, setPrivacyRequestError] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -168,6 +180,57 @@ export default function ProfilePage() {
     router.push("/login");
   }
 
+  async function requestPrivacy(type: PrivacyRequestType) {
+    setPrivacyRequestLoading(type);
+    setPrivacyRequestSuccess("");
+    setPrivacyRequestError("");
+
+    if (!user?.id) {
+      setPrivacyRequestError("Não foi possível identificar o responsável agora.");
+      setPrivacyRequestLoading("");
+      return;
+    }
+
+    if (type === "CHILD_DATA_DELETION" && !child?.id) {
+      setPrivacyRequestError("Não há criança selecionada para solicitar exclusão dos dados.");
+      setPrivacyRequestLoading("");
+      return;
+    }
+
+    const messages: Record<PrivacyRequestType, string> = {
+      DATA_CORRECTION: "O responsável solicitou correção dos próprios dados.",
+      ACCOUNT_DELETION: "O responsável solicitou exclusão da conta familiar.",
+      CHILD_DATA_DELETION: "O responsável solicitou exclusão dos dados da criança.",
+    };
+
+    try {
+      const response = await fetch("/api/privacy-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          childId: type === "CHILD_DATA_DELETION" ? child?.id : null,
+          type,
+          message: messages[type],
+        }),
+      });
+      const data = (await response.json()) as PrivacyRequestResponse;
+
+      if (!response.ok || !data.privacyRequest) {
+        setPrivacyRequestError(data.message || "Não foi possível registrar a solicitação agora.");
+        return;
+      }
+
+      setPrivacyRequestSuccess("Solicitação registrada! A equipe do Livoz fará a análise manual.");
+    } catch {
+      setPrivacyRequestError("Não foi possível conectar ao Livoz agora.");
+    } finally {
+      setPrivacyRequestLoading("");
+    }
+  }
+
   return (
     <ProtectedRoute>
       <AppShell>
@@ -199,6 +262,9 @@ export default function ProfilePage() {
 
             <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">
               <h2 className="font-title text-xl font-extrabold">Criança</h2>
+              <p className="mt-2 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-livoz-navy">
+                Esta conta infantil é gerenciada por um responsável.
+              </p>
               <div className="mt-4 flex items-start gap-4">
                 <div className="grid h-16 w-16 place-items-center rounded-[22px] bg-livoz-yellow text-3xl">{child?.avatar || "⭐"}</div>
                 <div className="grid gap-2 text-sm text-slate-600">
@@ -229,6 +295,88 @@ export default function ProfilePage() {
               >
                 {benefitSummary.button}
               </Link>
+            </section>
+
+            <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">
+              <h2 className="font-title text-xl font-extrabold">Controle do Responsável</h2>
+              <div className="mt-4 grid gap-3 text-sm text-slate-600">
+                <p><strong className="text-slate-900">Responsável:</strong> {user?.name || "-"}</p>
+                <p><strong className="text-slate-900">E-mail:</strong> {user?.email || "-"}</p>
+              </div>
+              <p className="mt-4 rounded-2xl bg-yellow-50 px-4 py-3 text-sm font-bold leading-6 text-livoz-navy">
+                A criança não deve compartilhar dados pessoais nas conversas.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Link
+                  href="/beneficios"
+                  className="inline-flex justify-center rounded-[18px] bg-livoz-blue px-4 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
+                >
+                  Acessar benefícios
+                </Link>
+                <Link
+                  href="/planos"
+                  className="inline-flex justify-center rounded-[18px] bg-livoz-cyan px-4 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
+                >
+                  Ver planos
+                </Link>
+              </div>
+            </section>
+
+            <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">
+              <h2 className="font-title text-xl font-extrabold">Privacidade e dados</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Você pode pedir correção ou exclusão de dados. No MVP, essas solicitações são registradas
+                para análise manual da equipe do Livoz.
+              </p>
+
+              <div className="mt-4 grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => void requestPrivacy("DATA_CORRECTION")}
+                  disabled={Boolean(privacyRequestLoading)}
+                  className="rounded-[18px] bg-livoz-blue px-4 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {privacyRequestLoading === "DATA_CORRECTION"
+                    ? "Registrando..."
+                    : "Solicitar correção dos meus dados"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void requestPrivacy("ACCOUNT_DELETION")}
+                  disabled={Boolean(privacyRequestLoading)}
+                  className="rounded-[18px] border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-extrabold text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {privacyRequestLoading === "ACCOUNT_DELETION"
+                    ? "Registrando..."
+                    : "Solicitar exclusão da minha conta"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void requestPrivacy("CHILD_DATA_DELETION")}
+                  disabled={Boolean(privacyRequestLoading)}
+                  className="rounded-[18px] border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-extrabold text-orange-700 transition disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {privacyRequestLoading === "CHILD_DATA_DELETION"
+                    ? "Registrando..."
+                    : "Solicitar exclusão dos dados da criança"}
+                </button>
+              </div>
+
+              {privacyRequestSuccess ? (
+                <p className="mt-4 rounded-2xl bg-green-50 px-4 py-3 text-sm font-extrabold text-green-700">
+                  {privacyRequestSuccess}
+                </p>
+              ) : null}
+
+              {privacyRequestError ? (
+                <p className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-sm font-extrabold text-orange-700">
+                  {privacyRequestError}
+                </p>
+              ) : null}
+
+              <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-bold leading-6 text-livoz-navy">
+                Para assuntos de privacidade, entre em contato pelo e-mail: suporte@livoz.app.
+              </p>
             </section>
           </>
         )}

@@ -34,6 +34,8 @@ export type RegisterUserPayload = {
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
   confirmedResponsible: boolean;
+  authorizedChildUse: boolean;
+  acceptedAiPolicy: boolean;
 };
 
 export type RegisterChildPayload = Omit<Child, "id" | "createdAt">;

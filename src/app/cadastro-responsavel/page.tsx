@@ -4,6 +4,7 @@ import { AuthCard } from "@/components/AuthCard";
 import { FormInput } from "@/components/FormInput";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { saveSession } from "@/lib/storage";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -17,6 +18,8 @@ type ResponsibleForm = {
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
   confirmedResponsible: boolean;
+  authorizedChildUse: boolean;
+  acceptedAiPolicy: boolean;
 };
 
 const initialForm: ResponsibleForm = {
@@ -29,6 +32,8 @@ const initialForm: ResponsibleForm = {
   acceptedTerms: false,
   acceptedPrivacy: false,
   confirmedResponsible: false,
+  authorizedChildUse: false,
+  acceptedAiPolicy: false,
 };
 
 export default function ResponsibleSignupPage() {
@@ -54,8 +59,24 @@ export default function ResponsibleSignupPage() {
       return "A confirmação de senha precisa ser igual à senha.";
     }
 
-    if (!form.acceptedTerms || !form.acceptedPrivacy || !form.confirmedResponsible) {
-      return "Confirme os aceites obrigatórios para criar a conta.";
+    if (!form.acceptedTerms) {
+      return "Você precisa aceitar os Termos de Uso para criar a conta.";
+    }
+
+    if (!form.acceptedPrivacy) {
+      return "Você precisa aceitar a Política de Privacidade para criar a conta.";
+    }
+
+    if (!form.confirmedResponsible) {
+      return "Confirme que você é pai, mãe ou responsável legal pela criança.";
+    }
+
+    if (!form.authorizedChildUse) {
+      return "Autorize o uso do Livoz pela criança sob sua responsabilidade.";
+    }
+
+    if (!form.acceptedAiPolicy) {
+      return "Confirme que entende o uso de inteligência artificial no Livoz.";
     }
 
     return "";
@@ -88,6 +109,8 @@ export default function ResponsibleSignupPage() {
           acceptedTerms: form.acceptedTerms,
           acceptedPrivacy: form.acceptedPrivacy,
           confirmedResponsible: form.confirmedResponsible,
+          authorizedChildUse: form.authorizedChildUse,
+          acceptedAiPolicy: form.acceptedAiPolicy,
         }),
       });
 
@@ -136,16 +159,42 @@ export default function ResponsibleSignupPage() {
 
         <div className="grid gap-3 rounded-[22px] bg-livoz-soft p-4 text-sm text-slate-700">
           <label className="flex gap-3">
-            <input type="checkbox" checked={form.acceptedTerms} onChange={(event) => updateField("acceptedTerms", event.target.checked)} disabled={isLoading} />
-            <span>Aceito os Termos de Uso.</span>
+            <input type="checkbox" checked={form.acceptedTerms} onChange={(event) => updateField("acceptedTerms", event.target.checked)} disabled={isLoading} required />
+            <span>
+              Li e aceito os{" "}
+              <Link href="/termos-de-uso" className="font-extrabold text-livoz-blue" target="_blank">
+                Termos de Uso
+              </Link>
+              .
+            </span>
           </label>
           <label className="flex gap-3">
-            <input type="checkbox" checked={form.acceptedPrivacy} onChange={(event) => updateField("acceptedPrivacy", event.target.checked)} disabled={isLoading} />
-            <span>Aceito a Política de Privacidade.</span>
+            <input type="checkbox" checked={form.acceptedPrivacy} onChange={(event) => updateField("acceptedPrivacy", event.target.checked)} disabled={isLoading} required />
+            <span>
+              Li e aceito a{" "}
+              <Link href="/politica-de-privacidade" className="font-extrabold text-livoz-blue" target="_blank">
+                Política de Privacidade
+              </Link>
+              .
+            </span>
           </label>
           <label className="flex gap-3">
-            <input type="checkbox" checked={form.confirmedResponsible} onChange={(event) => updateField("confirmedResponsible", event.target.checked)} disabled={isLoading} />
-            <span>Confirmo que sou pai, mãe ou responsável legal pela criança.</span>
+            <input type="checkbox" checked={form.confirmedResponsible} onChange={(event) => updateField("confirmedResponsible", event.target.checked)} disabled={isLoading} required />
+            <span>Confirmo que sou pai, mãe ou responsável legal pela criança cadastrada.</span>
+          </label>
+          <label className="flex gap-3">
+            <input type="checkbox" checked={form.authorizedChildUse} onChange={(event) => updateField("authorizedChildUse", event.target.checked)} disabled={isLoading} required />
+            <span>Autorizo o uso do Livoz pela criança sob minha responsabilidade.</span>
+          </label>
+          <label className="flex gap-3">
+            <input type="checkbox" checked={form.acceptedAiPolicy} onChange={(event) => updateField("acceptedAiPolicy", event.target.checked)} disabled={isLoading} required />
+            <span>
+              Entendo que o Livoz utiliza inteligência artificial em atividades de conversação e aprendizagem.{" "}
+              <Link href="/politica-de-ia" className="font-extrabold text-livoz-blue" target="_blank">
+                Ver Política de IA
+              </Link>
+              .
+            </span>
           </label>
         </div>
 

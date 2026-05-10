@@ -2,7 +2,7 @@
 
 import { AppShell } from "@/components/AppShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { getSession } from "@/lib/storage";
+import { getSession, getStorageItem, setStorageItem } from "@/lib/storage";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
@@ -44,6 +44,8 @@ const initialMessages: Message[] = [
   },
 ];
 
+const AI_NOTICE_STORAGE_KEY = "livozAiConversationNoticeAccepted";
+
 export default function ChatPage() {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
@@ -57,6 +59,7 @@ export default function ChatPage() {
   const [voiceReply, setVoiceReply] = useState("");
   const [voiceAudioUrl, setVoiceAudioUrl] = useState("");
   const [voiceAudioError, setVoiceAudioError] = useState("");
+  const [showAiNotice, setShowAiNotice] = useState(false);
   const [error, setError] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -82,6 +85,7 @@ export default function ChatPage() {
     }
 
     setChildId(session.childId);
+    setShowAiNotice(getStorageItem(AI_NOTICE_STORAGE_KEY) !== "true");
 
     async function loadHistory() {
       try {
@@ -119,6 +123,11 @@ export default function ChatPage() {
 
     loadHistory();
   }, [router]);
+
+  function acceptAiNotice() {
+    setStorageItem(AI_NOTICE_STORAGE_KEY, "true");
+    setShowAiNotice(false);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -359,7 +368,36 @@ export default function ChatPage() {
           </p>
         </section>
 
+        {showAiNotice ? (
+          <section className="mt-5 rounded-[28px] border border-blue-100 bg-white p-5 shadow-card">
+            <span className="rounded-full bg-livoz-soft px-4 py-2 text-xs font-extrabold text-livoz-blue">
+              Antes de começar
+            </span>
+            <h2 className="mt-4 font-title text-2xl font-extrabold text-livoz-navy">
+              Como a Livoz ajuda
+            </h2>
+            <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-600">
+              <p>A inteligência artificial ajuda a praticar frases, palavras e pequenas conversas.</p>
+              <p>Ela pode cometer erros, então um responsável deve acompanhar o uso quando precisar.</p>
+              <p>Nunca envie endereço, telefone, documentos ou dados pessoais na conversa.</p>
+            </div>
+            <button
+              type="button"
+              onClick={acceptAiNotice}
+              className="mt-5 rounded-[18px] bg-livoz-blue px-5 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
+            >
+              Entendi
+            </button>
+          </section>
+        ) : null}
+
         <section className="mt-5 rounded-[28px] bg-white p-4 shadow-card">
+          <p className="mb-3 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-livoz-blue">
+            A Livoz usa inteligência artificial para ajudar no aprendizado.
+          </p>
+          <p className="mb-4 rounded-2xl bg-yellow-50 px-4 py-3 text-xs font-bold leading-5 text-livoz-navy">
+            Nunca envie endereço, telefone, documentos ou dados pessoais.
+          </p>
           <div className="grid max-h-[420px] gap-3 overflow-y-auto pr-1">
             {isHistoryLoading ? (
               <div className="justify-self-start rounded-[24px] bg-blue-50 px-4 py-3 text-sm font-bold text-livoz-blue">
@@ -428,7 +466,7 @@ export default function ChatPage() {
                 Dica: fale perto do microfone por 2 ou 3 segundos, em um lugar mais silencioso.
               </p>
               <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-xs font-bold leading-5 text-slate-500">
-                A voz da Livoz é gerada por inteligência artificial.
+                A voz da Livoz é gerada por inteligência artificial, não por uma pessoa real.
               </p>
             </div>
             <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-white text-3xl shadow-card">

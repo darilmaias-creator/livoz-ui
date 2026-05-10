@@ -12,6 +12,8 @@ type RegisterResponsibleBody = {
   acceptedTerms?: boolean;
   acceptedPrivacy?: boolean;
   confirmedResponsible?: boolean;
+  authorizedChildUse?: boolean;
+  acceptedAiPolicy?: boolean;
 };
 
 function sanitizeUser(user: {
@@ -24,6 +26,8 @@ function sanitizeUser(user: {
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
   confirmedResponsible: boolean;
+  authorizedChildUse: boolean;
+  acceptedAiPolicy: boolean;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -37,6 +41,8 @@ function sanitizeUser(user: {
     acceptedTerms: user.acceptedTerms,
     acceptedPrivacy: user.acceptedPrivacy,
     confirmedResponsible: user.confirmedResponsible,
+    authorizedChildUse: user.authorizedChildUse,
+    acceptedAiPolicy: user.acceptedAiPolicy,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
@@ -59,9 +65,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!body.acceptedTerms || !body.acceptedPrivacy || !body.confirmedResponsible) {
+    if (
+      !body.acceptedTerms ||
+      !body.acceptedPrivacy ||
+      !body.confirmedResponsible ||
+      !body.authorizedChildUse ||
+      !body.acceptedAiPolicy
+    ) {
       return NextResponse.json(
-        { message: "Confirme os termos, a política de privacidade e a responsabilidade legal." },
+        { message: "Confirme todos os consentimentos obrigatórios para criar a conta." },
         { status: 400 },
       );
     }
@@ -110,6 +122,8 @@ export async function POST(request: Request) {
         acceptedTerms: body.acceptedTerms,
         acceptedPrivacy: body.acceptedPrivacy,
         confirmedResponsible: body.confirmedResponsible,
+        authorizedChildUse: body.authorizedChildUse,
+        acceptedAiPolicy: body.acceptedAiPolicy,
       },
     });
 

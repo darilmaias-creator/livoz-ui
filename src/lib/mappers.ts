@@ -12,6 +12,8 @@ export function toUser(user: PrismaUser): User {
     acceptedTerms: user.acceptedTerms,
     acceptedPrivacy: user.acceptedPrivacy,
     confirmedResponsible: user.confirmedResponsible,
+    authorizedChildUse: user.authorizedChildUse,
+    acceptedAiPolicy: user.acceptedAiPolicy,
     createdAt: user.createdAt.toISOString(),
   };
 }

@@ -59,6 +59,8 @@ export async function GET(_request: Request, context: RouteContext) {
         acceptedTerms: user.acceptedTerms,
         acceptedPrivacy: user.acceptedPrivacy,
         confirmedResponsible: user.confirmedResponsible,
+        authorizedChildUse: user.authorizedChildUse,
+        acceptedAiPolicy: user.acceptedAiPolicy,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
         children: user.children.map((child) => ({

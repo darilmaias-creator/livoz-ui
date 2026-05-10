@@ -14,8 +14,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Preencha todos os campos para criar a conta." }, { status: 400 });
     }
 
-    if (!body.acceptedTerms || !body.acceptedPrivacy || !body.confirmedResponsible) {
-      return NextResponse.json({ message: "Confirme os aceites obrigatórios para continuar." }, { status: 400 });
+    if (
+      !body.acceptedTerms ||
+      !body.acceptedPrivacy ||
+      !body.confirmedResponsible ||
+      !body.authorizedChildUse ||
+      !body.acceptedAiPolicy
+    ) {
+      return NextResponse.json({ message: "Confirme todos os consentimentos obrigatórios para continuar." }, { status: 400 });
     }
 
     if (body.password.length < 6) {
@@ -44,6 +50,8 @@ export async function POST(request: Request) {
         acceptedTerms: body.acceptedTerms,
         acceptedPrivacy: body.acceptedPrivacy,
         confirmedResponsible: body.confirmedResponsible,
+        authorizedChildUse: body.authorizedChildUse,
+        acceptedAiPolicy: body.acceptedAiPolicy,
       },
     });
 

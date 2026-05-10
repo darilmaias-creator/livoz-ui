@@ -14,6 +14,7 @@ const navItems = [
   { href: "/admin/planos", label: "Planos", icon: "⭐" },
   { href: "/admin/missoes", label: "Missões", icon: "🎯" },
   { href: "/admin/conversas", label: "Conversas", icon: "💬" },
+  { href: "/admin/privacidade", label: "Privacidade", icon: "🔐" },
   { href: "/dashboard", label: "Área infantil", icon: "🏠" },
 ];
 

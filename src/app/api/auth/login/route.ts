@@ -17,6 +17,8 @@ function sanitizeUser(user: {
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
   confirmedResponsible: boolean;
+  authorizedChildUse: boolean;
+  acceptedAiPolicy: boolean;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -30,6 +32,8 @@ function sanitizeUser(user: {
     acceptedTerms: user.acceptedTerms,
     acceptedPrivacy: user.acceptedPrivacy,
     confirmedResponsible: user.confirmedResponsible,
+    authorizedChildUse: user.authorizedChildUse,
+    acceptedAiPolicy: user.acceptedAiPolicy,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

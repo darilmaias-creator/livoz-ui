@@ -8,6 +8,8 @@ export type User = {
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
   confirmedResponsible: boolean;
+  authorizedChildUse: boolean;
+  acceptedAiPolicy: boolean;
   createdAt: string;
 };
 
