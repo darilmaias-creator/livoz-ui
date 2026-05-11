@@ -1,6 +1,7 @@
 "use client";
 
 import { getSession } from "@/lib/storage";
+import { isKidModeActive } from "@/lib/kidMode";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
@@ -18,6 +19,15 @@ export function AdminProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const session = getSession();
+
+    if (isKidModeActive()) {
+      window.sessionStorage.setItem(
+        "kidModeBlockedMessage",
+        "Esta área é protegida pelo PIN do responsável.",
+      );
+      router.replace("/dashboard");
+      return;
+    }
 
     if (!session.userId) {
       router.replace("/login");

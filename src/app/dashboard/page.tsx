@@ -3,6 +3,7 @@
 import { AppShell } from "@/components/AppShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { getBenefitLabel, type BenefitType } from "@/lib/benefits";
+import { activateKidMode, isKidModeActive, requestKidModeWakeLock } from "@/lib/kidMode";
 import { getSession, saveSession } from "@/lib/storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,6 +36,7 @@ type UserProfileResponse = {
   user?: {
     id: string;
     name: string;
+    hasParentPin: boolean;
     children: DashboardChild[];
   };
 };
@@ -49,6 +51,9 @@ export default function DashboardPage() {
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [benefitEndsAt, setBenefitEndsAt] = useState<string | null>(null);
   const [progressPercent, setProgressPercent] = useState(0);
+  const [hasParentPin, setHasParentPin] = useState(false);
+  const [kidModeActive, setKidModeActive] = useState(false);
+  const [kidModeMessage, setKidModeMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -60,6 +65,13 @@ export default function DashboardPage() {
     if (!userId) {
       router.replace("/login");
       return;
+    }
+
+    setKidModeActive(isKidModeActive());
+    const blockedMessage = window.sessionStorage.getItem("kidModeBlockedMessage");
+    if (blockedMessage) {
+      setKidModeMessage(blockedMessage);
+      window.sessionStorage.removeItem("kidModeBlockedMessage");
     }
 
     async function loadDashboard() {
@@ -90,6 +102,7 @@ export default function DashboardPage() {
         const totalProgress = currentChild.progress?.length ?? 0;
 
         setChild(currentChild);
+        setHasParentPin(Boolean(data.user.hasParentPin));
         setPlanName(activeSubscription?.plan.name || "Modo Gratuito");
         setPlanSlug(activeSubscription?.plan.slug || "modo-gratuito");
         setSubscriptionStatus(activeSubscription?.status || "ACTIVE");
@@ -114,6 +127,28 @@ export default function DashboardPage() {
 
     loadDashboard();
   }, [router]);
+
+  async function activateProtectedKidMode() {
+    setKidModeMessage("");
+
+    if (!hasParentPin) {
+      setKidModeMessage("Crie um PIN parental no perfil antes de ativar o Modo Infantil Protegido.");
+      router.push("/perfil");
+      return;
+    }
+
+    activateKidMode();
+    setKidModeActive(true);
+    setKidModeMessage("Modo Infantil Protegido ativado.");
+
+    try {
+      await document.documentElement.requestFullscreen?.();
+    } catch {
+      // Fullscreen depends on browser/device permission.
+    }
+
+    await requestKidModeWakeLock();
+  }
 
   const languageLabel = useMemo(() => {
     if (!child?.targetLanguage) return "um novo idioma";
@@ -181,22 +216,49 @@ export default function DashboardPage() {
             </section>
 
             <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">
-              <h2 className="font-title text-xl font-extrabold text-livoz-navy">Plano e pagamento</h2>
-              <div className="mt-4 grid gap-2 text-sm text-slate-600">
-                <p><strong className="text-slate-900">Plano atual:</strong> {planName}</p>
-                <p><strong className="text-slate-900">Status da assinatura:</strong> {subscriptionStatusLabel}</p>
-                <p><strong className="text-slate-900">{benefitSummary.title}</strong></p>
-                <p>{benefitSummary.benefit}</p>
-                <p>{benefitSummary.discount}</p>
-                {benefitSummary.validity ? <p>{benefitSummary.validity}</p> : null}
-              </div>
-              <Link
-                href="/planos"
-                className="mt-5 inline-flex w-full justify-center rounded-[20px] bg-livoz-blue px-4 py-3 font-extrabold text-white transition hover:bg-livoz-navy"
+              <h2 className="font-title text-xl font-extrabold text-livoz-navy">Modo Infantil Protegido</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Deixe a criança estudar em um ambiente focado, com saída protegida por PIN parental.
+              </p>
+              <p className="mt-3 rounded-2xl bg-yellow-50 px-4 py-3 text-xs font-bold leading-5 text-livoz-navy">
+                Este bloqueio protege a navegação dentro do Livoz, mas não impede botões do aparelho,
+                como Home, troca de aplicativo ou fechar navegador. Para maior proteção, use Fixar App
+                no Android ou Acesso Guiado no iPhone.
+              </p>
+              {kidModeMessage ? (
+                <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-extrabold text-livoz-navy">
+                  {kidModeMessage}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void activateProtectedKidMode()}
+                disabled={kidModeActive}
+                className="mt-5 w-full rounded-[20px] bg-livoz-orange px-4 py-3 font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {benefitSummary.button}
-              </Link>
+                {kidModeActive ? "Modo Infantil ativo" : "Ativar Modo Infantil"}
+              </button>
             </section>
+
+            {!kidModeActive ? (
+              <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">
+                <h2 className="font-title text-xl font-extrabold text-livoz-navy">Plano e pagamento</h2>
+                <div className="mt-4 grid gap-2 text-sm text-slate-600">
+                  <p><strong className="text-slate-900">Plano atual:</strong> {planName}</p>
+                  <p><strong className="text-slate-900">Status da assinatura:</strong> {subscriptionStatusLabel}</p>
+                  <p><strong className="text-slate-900">{benefitSummary.title}</strong></p>
+                  <p>{benefitSummary.benefit}</p>
+                  <p>{benefitSummary.discount}</p>
+                  {benefitSummary.validity ? <p>{benefitSummary.validity}</p> : null}
+                </div>
+                <Link
+                  href="/planos"
+                  className="mt-5 inline-flex w-full justify-center rounded-[20px] bg-livoz-blue px-4 py-3 font-extrabold text-white transition hover:bg-livoz-navy"
+                >
+                  {benefitSummary.button}
+                </Link>
+              </section>
+            ) : null}
 
             <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">
               <div className="flex items-end justify-between">

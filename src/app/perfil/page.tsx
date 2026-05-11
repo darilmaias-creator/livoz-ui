@@ -35,6 +35,7 @@ type ProfileUser = {
   name: string;
   email: string;
   phone: string | null;
+  hasParentPin: boolean;
   children: ProfileChild[];
 };
 
@@ -73,6 +74,12 @@ export default function ProfilePage() {
   const [privacyRequestLoading, setPrivacyRequestLoading] = useState<PrivacyRequestType | "">("");
   const [privacyRequestSuccess, setPrivacyRequestSuccess] = useState("");
   const [privacyRequestError, setPrivacyRequestError] = useState("");
+  const [pinPassword, setPinPassword] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinSuccess, setPinSuccess] = useState("");
+  const [pinError, setPinError] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -231,6 +238,59 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleSetParentPin() {
+    setPinSuccess("");
+    setPinError("");
+
+    if (!user?.id) {
+      setPinError("Não foi possível identificar o responsável agora.");
+      return;
+    }
+
+    if (!pinPassword || !pin || !confirmPin) {
+      setPinError("Preencha senha, PIN e confirmação do PIN.");
+      return;
+    }
+
+    if (!/^\d{4}$|^\d{6}$/.test(pin)) {
+      setPinError("O PIN deve ter 4 ou 6 números.");
+      return;
+    }
+
+    setPinLoading(true);
+
+    try {
+      const response = await fetch("/api/parent-pin/set", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          password: pinPassword,
+          pin,
+          confirmPin,
+        }),
+      });
+      const data = (await response.json()) as { message?: string };
+
+      if (!response.ok) {
+        setPinError(data.message || "Não foi possível configurar o PIN.");
+        return;
+      }
+
+      setUser((current) => (current ? { ...current, hasParentPin: true } : current));
+      setPinPassword("");
+      setPin("");
+      setConfirmPin("");
+      setPinSuccess(data.message || "PIN parental configurado com sucesso.");
+    } catch {
+      setPinError("Não foi possível conectar ao Livoz agora.");
+    } finally {
+      setPinLoading(false);
+    }
+  }
+
   return (
     <ProtectedRoute>
       <AppShell>
@@ -320,6 +380,64 @@ export default function ProfilePage() {
                   Ver planos
                 </Link>
               </div>
+            </section>
+
+            <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">
+              <h2 className="font-title text-xl font-extrabold">PIN Parental</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {user?.hasParentPin
+                  ? "PIN parental configurado."
+                  : "Crie um PIN para ativar o Modo Infantil Protegido."}
+              </p>
+              <div className="mt-4 grid gap-3">
+                <input
+                  value={pinPassword}
+                  onChange={(event) => setPinPassword(event.target.value)}
+                  className="min-h-12 rounded-[18px] border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:ring-4 focus:ring-blue-100"
+                  placeholder="Senha de login"
+                  type="password"
+                />
+                <input
+                  value={pin}
+                  onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="min-h-12 rounded-[18px] border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:ring-4 focus:ring-blue-100"
+                  inputMode="numeric"
+                  placeholder="Novo PIN com 4 ou 6 números"
+                  type="password"
+                />
+                <input
+                  value={confirmPin}
+                  onChange={(event) => setConfirmPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="min-h-12 rounded-[18px] border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:ring-4 focus:ring-blue-100"
+                  inputMode="numeric"
+                  placeholder="Confirmar novo PIN"
+                  type="password"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSetParentPin()}
+                  disabled={pinLoading}
+                  className="rounded-[18px] bg-livoz-blue px-4 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {pinLoading
+                    ? "Salvando..."
+                    : user?.hasParentPin
+                      ? "Alterar PIN"
+                      : "Criar PIN"}
+                </button>
+              </div>
+
+              {pinSuccess ? (
+                <p className="mt-4 rounded-2xl bg-green-50 px-4 py-3 text-sm font-extrabold text-green-700">
+                  {pinSuccess}
+                </p>
+              ) : null}
+
+              {pinError ? (
+                <p className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-sm font-extrabold text-orange-700">
+                  {pinError}
+                </p>
+              ) : null}
             </section>
 
             <section className="mt-5 rounded-[28px] bg-white p-5 shadow-card">

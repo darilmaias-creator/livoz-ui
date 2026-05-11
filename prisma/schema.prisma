@@ -89,6 +89,7 @@ model User {
   phone                String?
   cpf                  String?  @unique
   passwordHash         String
+  parentPinHash        String?
   role                 UserRole @default(RESPONSAVEL)
   acceptedTerms        Boolean  @default(false)
   acceptedPrivacy      Boolean  @default(false)

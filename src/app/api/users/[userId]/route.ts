@@ -61,6 +61,7 @@ export async function GET(_request: Request, context: RouteContext) {
         confirmedResponsible: user.confirmedResponsible,
         authorizedChildUse: user.authorizedChildUse,
         acceptedAiPolicy: user.acceptedAiPolicy,
+        hasParentPin: Boolean(user.parentPinHash),
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
         children: user.children.map((child) => ({
