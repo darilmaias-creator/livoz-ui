@@ -1,6 +1,7 @@
 "use client";
 
 import { AppShell } from "@/components/AppShell";
+import { LiveVoiceConversation } from "@/components/LiveVoiceConversation";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { getSession, getStorageItem, setStorageItem } from "@/lib/storage";
 import { useRouter } from "next/navigation";
@@ -480,6 +481,16 @@ export default function ChatPage() {
             </button>
           </section>
         ) : null}
+
+        <div className="mt-5">
+          <LiveVoiceConversation
+            topic={selectedTopic.value}
+            language="english"
+            level="INICIANTE"
+            onFallbackText={() => setError("Use a conversa por texto abaixo enquanto a conversa ao vivo não conecta.")}
+            onFallbackVoice={() => void startRecording()}
+          />
+        </div>
 
         <section className="mt-5 rounded-[28px] bg-white p-4 shadow-card">
           <div className="mb-4">

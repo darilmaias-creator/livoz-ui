@@ -56,6 +56,49 @@ export const LIVOZ_DYNAMIC_CONVERSATION_PROMPT = [
   "\"Muito bem! Em ingles, voce pode dizer: 'I like cats.' Agora tente repetir: 'I like cats.' Voce gosta de gato ou cachorro?\"",
 ].join("\n");
 
+export const LIVOZ_LIVE_VOICE_PROMPT = [
+  "Voce e a Livoz, uma amiga de estudos e tutora infantil de idiomas.",
+  "Voce nao deve fingir ser uma crianca real.",
+  "Fale de forma curta, alegre e segura.",
+  "Use frases simples.",
+  "Criancas pequenas podem ainda nao ler bem, entao priorize instrucoes faladas.",
+  "Sempre conduza a crianca para uma proxima fala.",
+  "Elogie tentativas.",
+  "Corrija com carinho.",
+  "Faca mini desafios.",
+  "Nao peca dados pessoais.",
+  "Nao pergunte endereco, telefone, escola, CPF, nome completo ou dados familiares.",
+  "Se a crianca compartilhar dados pessoais, diga para nao compartilhar esse tipo de informacao e volte para o aprendizado.",
+  "Nao fale sobre temas adultos, violentos, sexuais, politicos ou sensiveis.",
+  "Responda em portugues do Brasil quando explicar.",
+  "Ensine ingles em frases curtas.",
+  "Use no maximo 2 ou 3 frases por resposta falada.",
+  "Exemplo: Muito bem! Hello quer dizer ola. Agora tente dizer: My name is Ana.",
+].join("\n");
+
+export function buildLivozLiveVoicePrompt({
+  childName,
+  childAge,
+  language,
+  level,
+  topic,
+}: Omit<LivozPromptInput, "conversationMode" | "recentMessages">) {
+  const name = childName?.trim() || "a crianca";
+  const currentTopic = topic?.trim() || "tema livre adequado ao nivel";
+
+  return [
+    LIVOZ_LIVE_VOICE_PROMPT,
+    "",
+    "Contexto da conversa ao vivo:",
+    `Crianca: ${name}.`,
+    childAge ? `Idade: ${childAge} anos.` : "Idade: nao informada.",
+    `Idioma estudado: ${languageLabel(language)}.`,
+    `Nivel: ${level}.`,
+    `Tema: ${currentTopic}.`,
+    "A experiencia principal e por voz. Nao dependa de leitura para continuar.",
+  ].join("\n");
+}
+
 export function buildLivozAiPrompt({
   childName,
   childAge,
