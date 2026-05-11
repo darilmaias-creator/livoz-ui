@@ -15,6 +15,14 @@ type Message = {
 type ChatResponse = {
   message?: string;
   reply?: string;
+  correction?: string | null;
+  newWord?: {
+    pt: string;
+    en: string;
+  } | null;
+  challenge?: string | null;
+  stars?: number;
+  nextQuestion?: string | null;
   conversationId?: string;
 };
 
@@ -31,6 +39,14 @@ type VoiceResponse = {
   message?: string;
   transcript?: string;
   reply?: string;
+  correction?: string | null;
+  newWord?: {
+    pt: string;
+    en: string;
+  } | null;
+  challenge?: string | null;
+  stars?: number;
+  nextQuestion?: string | null;
   audioBase64?: string;
   audioMimeType?: string;
   conversationId?: string;
@@ -46,10 +62,39 @@ const initialMessages: Message[] = [
 
 const AI_NOTICE_STORAGE_KEY = "livozAiConversationNoticeAccepted";
 
+const topics = [
+  { label: "Cumprimentos", value: "greetings", icon: "👋" },
+  { label: "Animais", value: "animals", icon: "🐾" },
+  { label: "Cores", value: "colors", icon: "🎨" },
+  { label: "Escola", value: "school", icon: "🎒" },
+  { label: "Família", value: "family", icon: "🏠" },
+  { label: "Comida", value: "food", icon: "🍎" },
+  { label: "Números", value: "numbers", icon: "🔢" },
+  { label: "Brinquedos", value: "toys", icon: "🧸" },
+];
+
+const modes = [
+  { label: "Conversa livre", value: "FREE_PRACTICE" },
+  { label: "Aula guiada", value: "GUIDED_LESSON" },
+  { label: "Jogo de palavras", value: "WORD_GAME" },
+  { label: "Faz de conta", value: "ROLEPLAY" },
+  { label: "Desafio do dia", value: "DAILY_CHALLENGE" },
+];
+
 export default function ChatPage() {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
   const [text, setText] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState(topics[0]);
+  const [conversationMode, setConversationMode] = useState(modes[0].value);
+  const [lastPrompt, setLastPrompt] = useState("");
+  const [lastChallenge, setLastChallenge] = useState<string | null>(null);
+  const [lastNewWord, setLastNewWord] = useState<{ pt: string; en: string } | null>(null);
+  const [lastStars, setLastStars] = useState<number | null>(null);
+  const [lastNextQuestion, setLastNextQuestion] = useState<string | null>(null);
+  const [lastCorrection, setLastCorrection] = useState<string | null>(null);
+  const [sessionChildMessages, setSessionChildMessages] = useState(0);
+  const [showPracticePause, setShowPracticePause] = useState(false);
   const [childId, setChildId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -129,6 +174,42 @@ export default function ChatPage() {
     setShowAiNotice(false);
   }
 
+  function applyStructuredResponse(data: ChatResponse) {
+    setLastChallenge(data.challenge || null);
+    setLastNewWord(data.newWord || null);
+    setLastStars(typeof data.stars === "number" ? data.stars : null);
+    setLastNextQuestion(data.nextQuestion || null);
+    setLastCorrection(data.correction || null);
+  }
+
+  function chooseNewTheme() {
+    const currentIndex = topics.findIndex((topic) => topic.value === selectedTopic.value);
+    const nextTopic = topics[(currentIndex + 1) % topics.length];
+    setSelectedTopic(nextTopic);
+    setLastChallenge(null);
+    setLastNewWord(null);
+    setLastStars(null);
+    setLastNextQuestion(null);
+    setLastCorrection(null);
+  }
+
+  function tryAgain() {
+    const retryText = lastNextQuestion || lastChallenge || lastPrompt || "";
+    setText(retryText);
+  }
+
+  function registerChildMessageInSession() {
+    setSessionChildMessages((current) => {
+      const nextCount = current + 1;
+
+      if (nextCount % 10 === 0) {
+        setShowPracticePause(true);
+      }
+
+      return nextCount;
+    });
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -150,6 +231,8 @@ export default function ChatPage() {
       text: cleanText,
     };
 
+    registerChildMessageInSession();
+    setLastPrompt(cleanText);
     setMessages((current) => [...current, userMessage]);
     setText("");
     setIsLoading(true);
@@ -165,6 +248,8 @@ export default function ChatPage() {
           message: cleanText,
           language: "english",
           level: "INICIANTE",
+          conversationMode,
+          topic: selectedTopic.value,
         }),
       });
       const data = (await response.json()) as ChatResponse;
@@ -175,6 +260,7 @@ export default function ChatPage() {
       }
 
       const reply = data.reply;
+      applyStructuredResponse(data);
 
       setMessages((current) => [
         ...current,
@@ -292,6 +378,8 @@ export default function ChatPage() {
       formData.append("childId", childId);
       formData.append("language", "english");
       formData.append("level", "INICIANTE");
+      formData.append("conversationMode", conversationMode);
+      formData.append("topic", selectedTopic.value);
       formData.append("audio", audioBlob, "livoz-voice.webm");
 
       const response = await fetch("/api/ai/voice-chat", {
@@ -307,6 +395,7 @@ export default function ChatPage() {
 
       setVoiceTranscript(data.transcript || "");
       setVoiceReply(data.reply);
+      applyStructuredResponse(data);
       setVoiceAudioUrl(
         data.audioBase64 && data.audioMimeType
           ? `data:${data.audioMimeType};base64,${data.audioBase64}`
@@ -314,6 +403,7 @@ export default function ChatPage() {
       );
 
       if (data.transcript) {
+        registerChildMessageInSession();
         setMessages((current) => [
           ...current,
           {
@@ -361,10 +451,10 @@ export default function ChatPage() {
     <ProtectedRoute>
       <AppShell>
         <section className="rounded-[32px] bg-gradient-to-br from-livoz-navy to-slate-800 p-6 text-white">
-          <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-bold">Conversa textual com IA</span>
-          <h1 className="mt-5 font-title text-3xl font-extrabold">Pratique com a Livoz</h1>
+          <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-bold">Você está praticando inglês</span>
+          <h1 className="mt-5 font-title text-3xl font-extrabold">Fale com a Livoz</h1>
           <p className="mt-2 leading-7 text-white/80">
-            Escreva uma mensagem e receba uma resposta curta, educativa e carinhosa.
+            Tema atual: {selectedTopic.icon} {selectedTopic.label}
           </p>
         </section>
 
@@ -392,6 +482,46 @@ export default function ChatPage() {
         ) : null}
 
         <section className="mt-5 rounded-[28px] bg-white p-4 shadow-card">
+          <div className="mb-4">
+            <h2 className="font-title text-xl font-extrabold text-livoz-navy">Escolha um tema</h2>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {topics.map((topic) => (
+                <button
+                  key={topic.value}
+                  type="button"
+                  onClick={() => setSelectedTopic(topic)}
+                  className={`shrink-0 rounded-[18px] px-4 py-3 text-sm font-extrabold transition ${
+                    selectedTopic.value === topic.value
+                      ? "bg-livoz-blue text-white"
+                      : "bg-livoz-soft text-livoz-navy"
+                  }`}
+                >
+                  {topic.icon} {topic.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h2 className="font-title text-xl font-extrabold text-livoz-navy">Modo de prática</h2>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {modes.map((mode) => (
+                <button
+                  key={mode.value}
+                  type="button"
+                  onClick={() => setConversationMode(mode.value)}
+                  className={`rounded-[18px] px-3 py-3 text-xs font-extrabold transition ${
+                    conversationMode === mode.value
+                      ? "bg-livoz-orange text-white"
+                      : "bg-slate-50 text-slate-600"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <p className="mb-3 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-livoz-blue">
             A Livoz usa inteligência artificial para ajudar no aprendizado.
           </p>
@@ -431,6 +561,46 @@ export default function ChatPage() {
             </p>
           ) : null}
 
+          {(lastChallenge || lastNewWord || lastStars !== null || lastCorrection || lastNextQuestion) ? (
+            <div className="mt-4 grid gap-3">
+              {lastStars !== null ? (
+                <div className="rounded-[22px] bg-yellow-50 px-4 py-3 text-sm font-extrabold text-livoz-navy">
+                  Você ganhou {lastStars} estrela{lastStars === 1 ? "" : "s"}! {"⭐".repeat(Math.max(0, lastStars))}
+                </div>
+              ) : null}
+
+              {lastNewWord ? (
+                <div className="rounded-[22px] bg-cyan-50 px-4 py-3">
+                  <p className="text-xs font-extrabold uppercase text-livoz-blue">Palavra Nova</p>
+                  <p className="mt-1 text-lg font-extrabold text-livoz-navy">
+                    {lastNewWord.pt} <span className="text-slate-400">→</span> {lastNewWord.en}
+                  </p>
+                </div>
+              ) : null}
+
+              {lastChallenge ? (
+                <div className="rounded-[22px] bg-orange-50 px-4 py-3">
+                  <p className="text-xs font-extrabold uppercase text-orange-700">Mini Desafio</p>
+                  <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastChallenge}</p>
+                </div>
+              ) : null}
+
+              {lastCorrection ? (
+                <div className="rounded-[22px] bg-blue-50 px-4 py-3">
+                  <p className="text-xs font-extrabold uppercase text-livoz-blue">Correção carinhosa</p>
+                  <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastCorrection}</p>
+                </div>
+              ) : null}
+
+              {lastNextQuestion ? (
+                <div className="rounded-[22px] bg-livoz-soft px-4 py-3">
+                  <p className="text-xs font-extrabold uppercase text-livoz-navy">Próxima pergunta</p>
+                  <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastNextQuestion}</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <form className="mt-4 flex gap-2" onSubmit={handleSubmit}>
             <input
               value={text}
@@ -448,6 +618,58 @@ export default function ChatPage() {
               {isLoading ? "Enviando..." : "Enviar"}
             </button>
           </form>
+
+          {showPracticePause ? (
+            <div className="mt-4 rounded-[24px] bg-yellow-50 p-4">
+              <h3 className="font-title text-xl font-extrabold text-livoz-navy">
+                Você completou uma prática!
+              </h3>
+              <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
+                Quer continuar ou fazer uma missão?
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPracticePause(false)}
+                  className="rounded-[18px] bg-livoz-blue px-4 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
+                >
+                  Continuar conversando
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/missoes")}
+                  className="rounded-[18px] bg-livoz-orange px-4 py-3 text-sm font-extrabold text-white transition"
+                >
+                  Fazer missão
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={startRecording}
+              disabled={isRecording || isVoiceLoading}
+              className="rounded-[16px] bg-livoz-cyan px-3 py-3 text-xs font-extrabold text-white transition disabled:opacity-60"
+            >
+              Falar
+            </button>
+            <button
+              type="button"
+              onClick={tryAgain}
+              className="rounded-[16px] bg-slate-50 px-3 py-3 text-xs font-extrabold text-slate-600"
+            >
+              Tentar de novo
+            </button>
+            <button
+              type="button"
+              onClick={chooseNewTheme}
+              className="rounded-[16px] bg-livoz-yellow px-3 py-3 text-xs font-extrabold text-livoz-navy"
+            >
+              Novo tema
+            </button>
+          </div>
         </section>
 
         <section className="mt-5 rounded-[28px] bg-livoz-soft p-5 shadow-card">

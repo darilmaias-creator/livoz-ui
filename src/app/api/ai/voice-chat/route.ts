@@ -5,6 +5,7 @@ import {
   pcm16Base64ToWavBase64,
   validateAudioFile,
 } from "@/lib/audio";
+import { detectPersonalDataRisk, getSafetyRedirectMessage } from "@/lib/childSafety";
 import {
   GeminiRequestError,
   generateGeminiText,
@@ -24,6 +25,85 @@ function normalizeLevel(level?: string) {
   }
 
   return null;
+}
+
+type StructuredVoiceReply = {
+  reply: string;
+  correction: string | null;
+  newWord: {
+    pt: string;
+    en: string;
+  } | null;
+  challenge: string | null;
+  stars: number;
+  nextQuestion: string | null;
+};
+
+function extractJsonObject(text: string) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced?.[1]?.trim() || trimmed;
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  return candidate.slice(start, end + 1);
+}
+
+function asNullableString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeStructuredReply(rawText: string): StructuredVoiceReply {
+  const jsonText = extractJsonObject(rawText);
+
+  if (!jsonText) {
+    return {
+      reply: rawText,
+      correction: null,
+      newWord: null,
+      challenge: null,
+      stars: 1,
+      nextQuestion: null,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(jsonText) as Partial<StructuredVoiceReply>;
+    const reply = asNullableString(parsed.reply) || rawText;
+    const newWord =
+      parsed.newWord &&
+      typeof parsed.newWord === "object" &&
+      asNullableString(parsed.newWord.pt) &&
+      asNullableString(parsed.newWord.en)
+        ? {
+            pt: asNullableString(parsed.newWord.pt) || "",
+            en: asNullableString(parsed.newWord.en) || "",
+          }
+        : null;
+    const stars = Number(parsed.stars);
+
+    return {
+      reply,
+      correction: asNullableString(parsed.correction),
+      newWord,
+      challenge: asNullableString(parsed.challenge),
+      stars: Number.isFinite(stars) ? Math.max(0, Math.min(3, Math.round(stars))) : 1,
+      nextQuestion: asNullableString(parsed.nextQuestion),
+    };
+  } catch {
+    return {
+      reply: rawText,
+      correction: null,
+      newWord: null,
+      challenge: null,
+      stars: 1,
+      nextQuestion: null,
+    };
+  }
 }
 
 function normalizeTtsAudio(audioBase64: string, mimeType: string) {
@@ -56,6 +136,8 @@ export async function POST(request: Request) {
     const childId = formData.get("childId")?.toString().trim();
     const language = formData.get("language")?.toString().trim() || "english";
     const level = normalizeLevel(formData.get("level")?.toString());
+    const conversationMode = formData.get("conversationMode")?.toString().trim() || "FREE_PRACTICE";
+    const topic = formData.get("topic")?.toString().trim() || "tema livre adequado ao nível";
 
     if (!(audio instanceof File)) {
       return NextResponse.json(
@@ -88,6 +170,9 @@ export async function POST(request: Request) {
       select: {
         id: true,
         name: true,
+        age: true,
+        targetLanguage: true,
+        level: true,
       },
     });
 
@@ -114,20 +199,71 @@ export async function POST(request: Request) {
       language,
     });
 
+    if (detectPersonalDataRisk(transcript)) {
+      const safeReply = getSafetyRedirectMessage();
+      const conversation = await prisma.aiConversation.create({
+        data: {
+          childId,
+          mode: ConversationMode.VOICE,
+          userMessage: transcript,
+          aiResponse: safeReply,
+          language,
+          level,
+          audioUrl: null,
+        },
+      });
+
+      return NextResponse.json({
+        transcript,
+        reply: safeReply,
+        correction: null,
+        newWord: null,
+        challenge: "Diga uma palavra em inglês que você já conhece.",
+        stars: 0,
+        nextQuestion: "Qual palavra em inglês você quer praticar agora?",
+        audioBase64: "",
+        audioMimeType: "",
+        conversationId: conversation.id,
+      });
+    }
+
+    const recentConversations = await prisma.aiConversation.findMany({
+      where: { childId },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        userMessage: true,
+        aiResponse: true,
+      },
+    });
+
     const prompt = buildLivozAiPrompt({
       childName: child.name,
-      language,
-      level,
+      childAge: child.age,
+      language: language || child.targetLanguage,
+      level: level || child.level,
+      conversationMode,
+      topic,
+      recentMessages: recentConversations.reverse(),
     });
-    const reply = await generateGeminiText({
+    const rawReply = await generateGeminiText({
       apiKey: geminiApiKey,
       prompt,
-      message: transcript,
+      message: [
+        "Responda exclusivamente em JSON valido, sem markdown.",
+        "Formato obrigatorio:",
+        "{\"reply\":\"texto principal curto\",\"correction\":null,\"newWord\":{\"pt\":\"gato\",\"en\":\"cat\"},\"challenge\":\"desafio curto\",\"stars\":2,\"nextQuestion\":\"pergunta simples\"}",
+        "Use null quando nao houver correcao, palavra nova, desafio ou pergunta.",
+        "stars deve ser um numero inteiro entre 0 e 3.",
+        "",
+        `Mensagem transcrita da crianca: ${transcript}`,
+      ].join("\n"),
     });
+    const structuredReply = normalizeStructuredReply(rawReply);
 
     const ttsAudio = await synthesizeGeminiSpeech({
       apiKey: geminiApiKey,
-      text: reply,
+      text: structuredReply.reply,
     });
     const normalizedAudio = normalizeTtsAudio(ttsAudio.data, ttsAudio.mimeType);
 
@@ -136,7 +272,7 @@ export async function POST(request: Request) {
         childId,
         mode: ConversationMode.VOICE,
         userMessage: transcript,
-        aiResponse: reply,
+        aiResponse: structuredReply.reply,
         language,
         level,
         audioUrl: null,
@@ -145,7 +281,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       transcript,
-      reply,
+      reply: structuredReply.reply,
+      correction: structuredReply.correction,
+      newWord: structuredReply.newWord,
+      challenge: structuredReply.challenge,
+      stars: structuredReply.stars,
+      nextQuestion: structuredReply.nextQuestion,
       audioBase64: normalizedAudio.audioBase64,
       audioMimeType: normalizedAudio.audioMimeType,
       conversationId: conversation.id,
