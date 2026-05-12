@@ -1,6 +1,7 @@
 "use client";
 
 import { detectPersonalDataRisk, getSafetyRedirectMessage } from "@/lib/childSafety";
+import { isSlowRepeatRequest } from "@/lib/slowRepeat";
 import { getSession } from "@/lib/storage";
 import { useEffect, useRef, useState } from "react";
 
@@ -323,6 +324,11 @@ export function LiveVoiceConversation({
     if (inputText) {
       lastInputRef.current = inputText;
       setTranscript(inputText);
+      if (isSlowRepeatRequest(inputText)) {
+        setMessage("A Livoz vai repetir devagar...");
+      } else {
+        setMessage("");
+      }
       setStatus("thinking");
 
       if (detectPersonalDataRisk(inputText)) {
