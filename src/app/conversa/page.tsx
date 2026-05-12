@@ -3,6 +3,7 @@
 import { AppShell } from "@/components/AppShell";
 import { LiveVoiceConversation } from "@/components/LiveVoiceConversation";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { isKidModeActive } from "@/lib/kidMode";
 import { getSession, getStorageItem, setStorageItem } from "@/lib/storage";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
@@ -106,6 +107,7 @@ export default function ChatPage() {
   const [voiceAudioUrl, setVoiceAudioUrl] = useState("");
   const [voiceAudioError, setVoiceAudioError] = useState("");
   const [showAiNotice, setShowAiNotice] = useState(false);
+  const [kidModeActive, setKidModeActive] = useState(false);
   const [error, setError] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -121,6 +123,21 @@ export default function ChatPage() {
 
     return preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
   }
+
+  useEffect(() => {
+    function syncKidMode() {
+      setKidModeActive(isKidModeActive());
+    }
+
+    syncKidMode();
+    window.addEventListener("kid-mode-change", syncKidMode);
+    window.addEventListener("storage", syncKidMode);
+
+    return () => {
+      window.removeEventListener("kid-mode-change", syncKidMode);
+      window.removeEventListener("storage", syncKidMode);
+    };
+  }, []);
 
   useEffect(() => {
     const session = getSession();
@@ -451,334 +468,378 @@ export default function ChatPage() {
   return (
     <ProtectedRoute>
       <AppShell>
-        <section className="rounded-[32px] bg-gradient-to-br from-livoz-navy to-slate-800 p-6 text-white">
-          <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-bold">Você está praticando inglês</span>
-          <h1 className="mt-5 font-title text-3xl font-extrabold">Fale com a Livoz</h1>
-          <p className="mt-2 leading-7 text-white/80">
-            Tema atual: {selectedTopic.icon} {selectedTopic.label}
-          </p>
-        </section>
+        {kidModeActive ? (
+          <div className="grid gap-5">
+            <section className="rounded-[32px] bg-gradient-to-br from-livoz-blue to-livoz-cyan p-6 text-white">
+              <h1 className="font-title text-4xl font-extrabold leading-tight">Fale com a Livoz</h1>
+              <p className="mt-3 text-lg font-bold leading-7 text-white/90">
+                Toque no botão, fale e escute a Livoz.
+              </p>
+            </section>
 
-        {showAiNotice ? (
-          <section className="mt-5 rounded-[28px] border border-blue-100 bg-white p-5 shadow-card">
-            <span className="rounded-full bg-livoz-soft px-4 py-2 text-xs font-extrabold text-livoz-blue">
-              Antes de começar
-            </span>
-            <h2 className="mt-4 font-title text-2xl font-extrabold text-livoz-navy">
-              Como a Livoz ajuda
-            </h2>
-            <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-600">
-              <p>A inteligência artificial ajuda a praticar frases, palavras e pequenas conversas.</p>
-              <p>Ela pode cometer erros, então um responsável deve acompanhar o uso quando precisar.</p>
-              <p>Nunca envie endereço, telefone, documentos ou dados pessoais na conversa.</p>
-            </div>
-            <button
-              type="button"
-              onClick={acceptAiNotice}
-              className="mt-5 rounded-[18px] bg-livoz-blue px-5 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
-            >
-              Entendi
-            </button>
-          </section>
-        ) : null}
+            <LiveVoiceConversation
+              topic={selectedTopic.value}
+              language="english"
+              level="INICIANTE"
+              variant="kid"
+            />
 
-        <div className="mt-5">
-          <LiveVoiceConversation
-            topic={selectedTopic.value}
-            language="english"
-            level="INICIANTE"
-            onFallbackText={() => setError("Use a conversa por texto abaixo enquanto a conversa ao vivo não conecta.")}
-            onFallbackVoice={() => void startRecording()}
-          />
-        </div>
-
-        <section className="mt-5 rounded-[28px] bg-white p-4 shadow-card">
-          <div className="mb-4">
-            <h2 className="font-title text-xl font-extrabold text-livoz-navy">Escolha um tema</h2>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              {topics.map((topic) => (
-                <button
-                  key={topic.value}
-                  type="button"
-                  onClick={() => setSelectedTopic(topic)}
-                  className={`shrink-0 rounded-[18px] px-4 py-3 text-sm font-extrabold transition ${
-                    selectedTopic.value === topic.value
-                      ? "bg-livoz-blue text-white"
-                      : "bg-livoz-soft text-livoz-navy"
-                  }`}
-                >
-                  {topic.icon} {topic.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <h2 className="font-title text-xl font-extrabold text-livoz-navy">Modo de prática</h2>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {modes.map((mode) => (
-                <button
-                  key={mode.value}
-                  type="button"
-                  onClick={() => setConversationMode(mode.value)}
-                  className={`rounded-[18px] px-3 py-3 text-xs font-extrabold transition ${
-                    conversationMode === mode.value
-                      ? "bg-livoz-orange text-white"
-                      : "bg-slate-50 text-slate-600"
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <p className="mb-3 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold leading-5 text-livoz-blue">
-            A Livoz usa inteligência artificial para ajudar no aprendizado.
-          </p>
-          <p className="mb-4 rounded-2xl bg-yellow-50 px-4 py-3 text-xs font-bold leading-5 text-livoz-navy">
-            Nunca envie endereço, telefone, documentos ou dados pessoais.
-          </p>
-          <div className="grid max-h-[420px] gap-3 overflow-y-auto pr-1">
-            {isHistoryLoading ? (
-              <div className="justify-self-start rounded-[24px] bg-blue-50 px-4 py-3 text-sm font-bold text-livoz-blue">
-                Carregando conversa...
-              </div>
-            ) : null}
-
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`max-w-[82%] rounded-[24px] px-4 py-3 leading-7 ${
-                  message.author === "user"
-                    ? "justify-self-end bg-cyan-100 text-slate-900"
-                    : "justify-self-start bg-blue-50 text-slate-800"
-                }`}
-              >
-                {message.text}
-              </div>
-            ))}
-
-            {isLoading ? (
-              <div className="max-w-[82%] justify-self-start rounded-[24px] bg-blue-50 px-4 py-3 text-sm font-bold text-livoz-blue">
-                Livoz está pensando...
-              </div>
+            {(lastChallenge || lastNewWord || lastStars !== null || lastNextQuestion) ? (
+              <section className="grid gap-3 rounded-[28px] bg-white p-4 shadow-card">
+                {lastStars !== null ? (
+                  <div className="rounded-[22px] bg-yellow-50 px-4 py-4 text-center font-title text-2xl font-extrabold text-livoz-navy">
+                    ⭐ Muito bem!
+                  </div>
+                ) : null}
+                {lastNewWord ? (
+                  <div className="rounded-[22px] bg-cyan-50 px-4 py-4 text-center">
+                    <p className="text-sm font-extrabold text-livoz-blue">Palavra nova</p>
+                    <p className="mt-1 font-title text-2xl font-extrabold text-livoz-navy">
+                      {lastNewWord.pt} → {lastNewWord.en}
+                    </p>
+                  </div>
+                ) : null}
+                {lastChallenge ? (
+                  <div className="rounded-[22px] bg-orange-50 px-4 py-4 text-center text-lg font-extrabold text-livoz-navy">
+                    Repita: {lastChallenge}
+                  </div>
+                ) : null}
+                {lastNextQuestion ? (
+                  <div className="rounded-[22px] bg-livoz-soft px-4 py-4 text-center text-lg font-extrabold text-livoz-navy">
+                    {lastNextQuestion}
+                  </div>
+                ) : null}
+              </section>
             ) : null}
           </div>
+        ) : (
+          <>
+            <section className="rounded-[32px] bg-gradient-to-br from-livoz-navy to-slate-800 p-6 text-white">
+              <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-bold">
+                Você está praticando inglês
+              </span>
+              <h1 className="mt-5 font-title text-3xl font-extrabold">Fale com a Livoz</h1>
+              <p className="mt-2 leading-7 text-white/80">
+                Converse ouvindo e falando. A Livoz vai escutar, responder por voz e continuar praticando com você.
+              </p>
+            </section>
 
-          {error ? (
-            <p className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
-              {error}
-            </p>
-          ) : null}
+            {showAiNotice ? (
+              <section className="mt-5 rounded-[28px] border border-blue-100 bg-white p-5 shadow-card">
+                <span className="rounded-full bg-livoz-soft px-4 py-2 text-xs font-extrabold text-livoz-blue">
+                  Antes de começar
+                </span>
+                <h2 className="mt-4 font-title text-2xl font-extrabold text-livoz-navy">
+                  Como a Livoz ajuda
+                </h2>
+                <div className="mt-3 grid gap-3 text-sm leading-6 text-slate-600">
+                  <p>A inteligência artificial ajuda a praticar frases, palavras e pequenas conversas.</p>
+                  <p>Ela pode cometer erros, então um responsável deve acompanhar o uso quando precisar.</p>
+                  <p>Nunca envie endereço, telefone, documentos ou dados pessoais na conversa.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={acceptAiNotice}
+                  className="mt-5 rounded-[18px] bg-livoz-blue px-5 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
+                >
+                  Entendi
+                </button>
+              </section>
+            ) : null}
 
-          {(lastChallenge || lastNewWord || lastStars !== null || lastCorrection || lastNextQuestion) ? (
-            <div className="mt-4 grid gap-3">
-              {lastStars !== null ? (
-                <div className="rounded-[22px] bg-yellow-50 px-4 py-3 text-sm font-extrabold text-livoz-navy">
-                  Você ganhou {lastStars} estrela{lastStars === 1 ? "" : "s"}! {"⭐".repeat(Math.max(0, lastStars))}
+            <div className="mt-5">
+              <LiveVoiceConversation
+                topic={selectedTopic.value}
+                language="english"
+                level="INICIANTE"
+                onFallbackText={() => setError("Use a conversa por texto abaixo enquanto a conversa ao vivo não conecta.")}
+                onFallbackVoice={() => void startRecording()}
+              />
+            </div>
+
+            <div className="mt-4 grid gap-2 rounded-[24px] bg-white p-4 text-xs font-bold leading-5 text-slate-600 shadow-card">
+              <p>A Livoz usa inteligência artificial.</p>
+              <p>Não compartilhe endereço, telefone ou dados pessoais.</p>
+              <p>A voz da Livoz é gerada por IA.</p>
+            </div>
+
+            <details className="mt-5 rounded-[28px] bg-white p-4 shadow-card">
+              <summary className="cursor-pointer font-title text-xl font-extrabold text-livoz-navy">
+                🎲 Temas e modos
+              </summary>
+              <div className="mt-4">
+                <h2 className="font-title text-lg font-extrabold text-livoz-navy">Escolha um tema</h2>
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {topics.map((topic) => (
+                    <button
+                      key={topic.value}
+                      type="button"
+                      onClick={() => setSelectedTopic(topic)}
+                      className={`shrink-0 rounded-[18px] px-4 py-3 text-sm font-extrabold transition ${
+                        selectedTopic.value === topic.value
+                          ? "bg-livoz-blue text-white"
+                          : "bg-livoz-soft text-livoz-navy"
+                      }`}
+                    >
+                      {topic.icon} {topic.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <h2 className="font-title text-lg font-extrabold text-livoz-navy">Modo de prática</h2>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {modes.map((mode) => (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      onClick={() => setConversationMode(mode.value)}
+                      className={`rounded-[18px] px-3 py-3 text-xs font-extrabold transition ${
+                        conversationMode === mode.value
+                          ? "bg-livoz-orange text-white"
+                          : "bg-slate-50 text-slate-600"
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </details>
+
+            <details className="mt-5 rounded-[28px] bg-white p-4 shadow-card" open>
+              <summary className="cursor-pointer font-title text-xl font-extrabold text-livoz-navy">
+                ⌨️ Escrever para a Livoz
+              </summary>
+
+              <div className="mt-4 grid max-h-[420px] gap-3 overflow-y-auto pr-1">
+                {isHistoryLoading ? (
+                  <div className="justify-self-start rounded-[24px] bg-blue-50 px-4 py-3 text-sm font-bold text-livoz-blue">
+                    Carregando conversa...
+                  </div>
+                ) : null}
+
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`max-w-[82%] rounded-[24px] px-4 py-3 leading-7 ${
+                      message.author === "user"
+                        ? "justify-self-end bg-cyan-100 text-slate-900"
+                        : "justify-self-start bg-blue-50 text-slate-800"
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+                ))}
+
+                {isLoading ? (
+                  <div className="max-w-[82%] justify-self-start rounded-[24px] bg-blue-50 px-4 py-3 text-sm font-bold text-livoz-blue">
+                    Livoz está pensando...
+                  </div>
+                ) : null}
+              </div>
+
+              {error ? (
+                <p className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
+                  {error}
+                </p>
+              ) : null}
+
+              {(lastChallenge || lastNewWord || lastStars !== null || lastCorrection || lastNextQuestion) ? (
+                <div className="mt-4 grid gap-3">
+                  {lastStars !== null ? (
+                    <div className="rounded-[22px] bg-yellow-50 px-4 py-3 text-sm font-extrabold text-livoz-navy">
+                      Você ganhou {lastStars} estrela{lastStars === 1 ? "" : "s"}! {"⭐".repeat(Math.max(0, lastStars))}
+                    </div>
+                  ) : null}
+                  {lastNewWord ? (
+                    <div className="rounded-[22px] bg-cyan-50 px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase text-livoz-blue">Palavra Nova</p>
+                      <p className="mt-1 text-lg font-extrabold text-livoz-navy">
+                        {lastNewWord.pt} <span className="text-slate-400">→</span> {lastNewWord.en}
+                      </p>
+                    </div>
+                  ) : null}
+                  {lastChallenge ? (
+                    <div className="rounded-[22px] bg-orange-50 px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase text-orange-700">Mini Desafio</p>
+                      <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastChallenge}</p>
+                    </div>
+                  ) : null}
+                  {lastCorrection ? (
+                    <div className="rounded-[22px] bg-blue-50 px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase text-livoz-blue">Correção carinhosa</p>
+                      <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastCorrection}</p>
+                    </div>
+                  ) : null}
+                  {lastNextQuestion ? (
+                    <div className="rounded-[22px] bg-livoz-soft px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase text-livoz-navy">Próxima pergunta</p>
+                      <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastNextQuestion}</p>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
-              {lastNewWord ? (
-                <div className="rounded-[22px] bg-cyan-50 px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase text-livoz-blue">Palavra Nova</p>
-                  <p className="mt-1 text-lg font-extrabold text-livoz-navy">
-                    {lastNewWord.pt} <span className="text-slate-400">→</span> {lastNewWord.en}
+              <form className="mt-4 flex gap-2" onSubmit={handleSubmit}>
+                <input
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                  className="min-w-0 flex-1 rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:ring-4 focus:ring-blue-100"
+                  placeholder="Escreva sua mensagem..."
+                  disabled={isLoading || isHistoryLoading}
+                  required
+                />
+                <button
+                  className="rounded-[18px] bg-livoz-blue px-4 py-3 font-bold text-white transition hover:bg-livoz-navy disabled:cursor-not-allowed disabled:opacity-60"
+                  type="submit"
+                  disabled={isLoading || isHistoryLoading || !text.trim()}
+                >
+                  {isLoading ? "Enviando..." : "Enviar"}
+                </button>
+              </form>
+
+              {showPracticePause ? (
+                <div className="mt-4 rounded-[24px] bg-yellow-50 p-4">
+                  <h3 className="font-title text-xl font-extrabold text-livoz-navy">
+                    Você completou uma prática!
+                  </h3>
+                  <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
+                    Quer continuar ou fazer uma missão?
+                  </p>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPracticePause(false)}
+                      className="rounded-[18px] bg-livoz-blue px-4 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
+                    >
+                      Continuar conversando
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/missoes")}
+                      className="rounded-[18px] bg-livoz-orange px-4 py-3 text-sm font-extrabold text-white transition"
+                    >
+                      Fazer missão
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={tryAgain}
+                  className="rounded-[16px] bg-slate-50 px-3 py-3 text-xs font-extrabold text-slate-600"
+                >
+                  Tentar de novo
+                </button>
+                <button
+                  type="button"
+                  onClick={chooseNewTheme}
+                  className="rounded-[16px] bg-livoz-yellow px-3 py-3 text-xs font-extrabold text-livoz-navy"
+                >
+                  Novo tema
+                </button>
+              </div>
+            </details>
+
+            <details className="mt-5 rounded-[28px] bg-livoz-soft p-5 shadow-card">
+              <summary className="cursor-pointer font-title text-xl font-extrabold text-livoz-navy">
+                🎤 Voz simples
+              </summary>
+              <div className="mt-4 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Use esta opção se a conversa ao vivo não funcionar no seu aparelho.
+                  </p>
+                  <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+                    Dica: fale perto do microfone por 2 ou 3 segundos, em um lugar mais silencioso.
+                  </p>
+                  <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-xs font-bold leading-5 text-slate-500">
+                    A voz da Livoz é gerada por inteligência artificial, não por uma pessoa real.
+                  </p>
+                </div>
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-white text-3xl shadow-card">
+                  🎙️
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  disabled={isRecording || isVoiceLoading}
+                  className="rounded-[18px] bg-livoz-blue px-4 py-3 font-extrabold text-white transition hover:bg-livoz-navy disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Começar gravação
+                </button>
+                <button
+                  type="button"
+                  onClick={stopRecording}
+                  disabled={!isRecording}
+                  className="rounded-[18px] bg-livoz-orange px-4 py-3 font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Parar gravação
+                </button>
+              </div>
+
+              {isRecording ? (
+                <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-livoz-orange">
+                  Gravando...
+                </p>
+              ) : null}
+
+              {isVoiceLoading ? (
+                <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-livoz-blue">
+                  Enviando áudio para a Livoz...
+                </p>
+              ) : null}
+
+              {voiceTranscript ? (
+                <div className="mt-4 rounded-2xl bg-white px-4 py-3">
+                  <p className="text-sm leading-6 text-slate-700">
+                    <strong>Você disse:</strong> {voiceTranscript}
                   </p>
                 </div>
               ) : null}
 
-              {lastChallenge ? (
-                <div className="rounded-[22px] bg-orange-50 px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase text-orange-700">Mini Desafio</p>
-                  <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastChallenge}</p>
+              {voiceTranscript ? (
+                <div className="mt-3 rounded-2xl bg-yellow-50 px-4 py-3">
+                  <p className="text-sm leading-6 text-slate-700">
+                    Eu entendi que você disse: <strong>{voiceTranscript}</strong>
+                  </p>
+                  <p className="mt-2 text-sm font-extrabold text-livoz-orange">
+                    Ótima tentativa! Continue praticando.
+                  </p>
                 </div>
               ) : null}
 
-              {lastCorrection ? (
-                <div className="rounded-[22px] bg-blue-50 px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase text-livoz-blue">Correção carinhosa</p>
-                  <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastCorrection}</p>
+              {voiceReply ? (
+                <div className="mt-3 rounded-2xl bg-white px-4 py-3">
+                  <p className="text-sm leading-6 text-slate-700">
+                    <strong>Livoz respondeu:</strong> {voiceReply}
+                  </p>
+                  {voiceAudioUrl ? (
+                    <button
+                      type="button"
+                      onClick={playVoiceReply}
+                      className="mt-3 rounded-[16px] bg-livoz-blue px-4 py-2 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
+                    >
+                      Ouvir resposta
+                    </button>
+                  ) : null}
+                  {voiceAudioError ? (
+                    <p className="mt-3 rounded-2xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
+                      {voiceAudioError}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
-
-              {lastNextQuestion ? (
-                <div className="rounded-[22px] bg-livoz-soft px-4 py-3">
-                  <p className="text-xs font-extrabold uppercase text-livoz-navy">Próxima pergunta</p>
-                  <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{lastNextQuestion}</p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <form className="mt-4 flex gap-2" onSubmit={handleSubmit}>
-            <input
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              className="min-w-0 flex-1 rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:ring-4 focus:ring-blue-100"
-              placeholder="Escreva sua mensagem..."
-              disabled={isLoading || isHistoryLoading}
-              required
-            />
-            <button
-              className="rounded-[18px] bg-livoz-blue px-4 py-3 font-bold text-white transition hover:bg-livoz-navy disabled:cursor-not-allowed disabled:opacity-60"
-              type="submit"
-              disabled={isLoading || isHistoryLoading || !text.trim()}
-            >
-              {isLoading ? "Enviando..." : "Enviar"}
-            </button>
-          </form>
-
-          {showPracticePause ? (
-            <div className="mt-4 rounded-[24px] bg-yellow-50 p-4">
-              <h3 className="font-title text-xl font-extrabold text-livoz-navy">
-                Você completou uma prática!
-              </h3>
-              <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
-                Quer continuar ou fazer uma missão?
-              </p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPracticePause(false)}
-                  className="rounded-[18px] bg-livoz-blue px-4 py-3 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
-                >
-                  Continuar conversando
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/missoes")}
-                  className="rounded-[18px] bg-livoz-orange px-4 py-3 text-sm font-extrabold text-white transition"
-                >
-                  Fazer missão
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={startRecording}
-              disabled={isRecording || isVoiceLoading}
-              className="rounded-[16px] bg-livoz-cyan px-3 py-3 text-xs font-extrabold text-white transition disabled:opacity-60"
-            >
-              Falar
-            </button>
-            <button
-              type="button"
-              onClick={tryAgain}
-              className="rounded-[16px] bg-slate-50 px-3 py-3 text-xs font-extrabold text-slate-600"
-            >
-              Tentar de novo
-            </button>
-            <button
-              type="button"
-              onClick={chooseNewTheme}
-              className="rounded-[16px] bg-livoz-yellow px-3 py-3 text-xs font-extrabold text-livoz-navy"
-            >
-              Novo tema
-            </button>
-          </div>
-        </section>
-
-        <section className="mt-5 rounded-[28px] bg-livoz-soft p-5 shadow-card">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <span className="rounded-full bg-white px-4 py-2 text-sm font-extrabold text-livoz-blue">
-                Conversa por voz
-              </span>
-              <h2 className="mt-4 font-title text-2xl font-extrabold text-livoz-navy">
-                Fale com a Livoz
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Grave uma frase curta. A Livoz escuta, responde por texto e toca o áudio quando estiver disponível.
-              </p>
-              <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
-                Dica: fale perto do microfone por 2 ou 3 segundos, em um lugar mais silencioso.
-              </p>
-              <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-xs font-bold leading-5 text-slate-500">
-                A voz da Livoz é gerada por inteligência artificial, não por uma pessoa real.
-              </p>
-            </div>
-            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-[22px] bg-white text-3xl shadow-card">
-              🎙️
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={startRecording}
-              disabled={isRecording || isVoiceLoading}
-              className="rounded-[18px] bg-livoz-blue px-4 py-3 font-extrabold text-white transition hover:bg-livoz-navy disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Começar gravação
-            </button>
-            <button
-              type="button"
-              onClick={stopRecording}
-              disabled={!isRecording}
-              className="rounded-[18px] bg-livoz-orange px-4 py-3 font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Parar gravação
-            </button>
-          </div>
-
-          {isRecording ? (
-            <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-livoz-orange">
-              Gravando...
-            </p>
-          ) : null}
-
-          {isVoiceLoading ? (
-            <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-extrabold text-livoz-blue">
-              Enviando áudio para a Livoz...
-            </p>
-          ) : null}
-
-          {voiceTranscript ? (
-            <div className="mt-4 rounded-2xl bg-white px-4 py-3">
-              <p className="text-sm leading-6 text-slate-700">
-                <strong>Você disse:</strong> {voiceTranscript}
-              </p>
-            </div>
-          ) : null}
-
-          {voiceTranscript ? (
-            <div className="mt-3 rounded-2xl bg-yellow-50 px-4 py-3">
-              <p className="text-sm leading-6 text-slate-700">
-                Eu entendi que você disse: <strong>{voiceTranscript}</strong>
-              </p>
-              <p className="mt-2 text-sm font-extrabold text-livoz-orange">
-                Ótima tentativa! Continue praticando.
-              </p>
-            </div>
-          ) : null}
-
-          {voiceReply ? (
-            <div className="mt-3 rounded-2xl bg-white px-4 py-3">
-              <p className="text-sm leading-6 text-slate-700">
-                <strong>Livoz respondeu:</strong> {voiceReply}
-              </p>
-              {voiceAudioUrl ? (
-                <button
-                  type="button"
-                  onClick={playVoiceReply}
-                  className="mt-3 rounded-[16px] bg-livoz-blue px-4 py-2 text-sm font-extrabold text-white transition hover:bg-livoz-navy"
-                >
-                  Ouvir resposta
-                </button>
-              ) : null}
-              {voiceAudioError ? (
-                <p className="mt-3 rounded-2xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
-                  {voiceAudioError}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
+            </details>
+          </>
+        )}
       </AppShell>
     </ProtectedRoute>
   );

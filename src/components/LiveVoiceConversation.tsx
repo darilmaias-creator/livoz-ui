@@ -14,6 +14,7 @@ type LiveSessionResponse = {
 };
 
 type LiveStatus = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "paused" | "error";
+type LiveVoiceVariant = "normal" | "kid";
 
 type LiveSessionLike = {
   sendRealtimeInput: (input: unknown) => void;
@@ -29,11 +30,13 @@ type WebkitWindow = Window & {
 const MAX_LIVE_TURNS = 10;
 const MAX_LIVE_SESSION_MS = 5 * 60 * 1000;
 
-function statusLabel(status: LiveStatus) {
-  if (status === "connecting") return "Preparando a conversa...";
-  if (status === "listening") return "Estou ouvindo...";
-  if (status === "thinking") return "A Livoz está pensando...";
-  if (status === "speaking") return "A Livoz está falando...";
+function statusLabel(status: LiveStatus, variant: LiveVoiceVariant) {
+  const kidPrefix = variant === "kid";
+
+  if (status === "connecting") return kidPrefix ? "✨ Preparando..." : "Preparando a conversa...";
+  if (status === "listening") return kidPrefix ? "👂 Estou ouvindo você..." : "Estou ouvindo...";
+  if (status === "thinking") return kidPrefix ? "🧠 A Livoz está pensando..." : "A Livoz está pensando...";
+  if (status === "speaking") return kidPrefix ? "🗣️ A Livoz está falando..." : "A Livoz está falando...";
   if (status === "paused") return "Conversa pausada.";
   if (status === "error") return "Não consegui iniciar a conversa ao vivo agora.";
   return "Toque no botão para começar.";
@@ -86,12 +89,14 @@ export function LiveVoiceConversation({
   language = "english",
   onFallbackText,
   onFallbackVoice,
+  variant = "normal",
 }: {
   topic: string;
   level?: string;
   language?: string;
   onFallbackText?: () => void;
   onFallbackVoice?: () => void;
+  variant?: LiveVoiceVariant;
 }) {
   const [status, setStatus] = useState<LiveStatus>("idle");
   const [message, setMessage] = useState("");
@@ -443,20 +448,36 @@ export function LiveVoiceConversation({
     setStatus("idle");
   }
 
+  const isKidVariant = variant === "kid";
+
   return (
-    <section className="rounded-[30px] bg-gradient-to-br from-livoz-blue to-livoz-cyan p-5 text-white shadow-card">
+    <section
+      className={`rounded-[30px] bg-gradient-to-br from-livoz-blue to-livoz-cyan text-white shadow-card ${
+        isKidVariant ? "p-6" : "p-5"
+      }`}
+    >
       <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-extrabold">
-        Conversa ao Vivo
+        {isKidVariant ? "🎙️ Falar com a Livoz" : "Conversa ao Vivo"}
       </span>
-      <h2 className="mt-5 font-title text-3xl font-extrabold">Fale com a Livoz</h2>
-      <p className="mt-2 text-sm font-bold leading-6 text-white/85">
-        Fale naturalmente com a Livoz. Ela vai ouvir e responder por voz.
+      <h2 className={`mt-5 font-title font-extrabold ${isKidVariant ? "text-4xl" : "text-3xl"}`}>
+        Fale com a Livoz
+      </h2>
+      <p className={`mt-2 font-bold leading-6 text-white/85 ${isKidVariant ? "text-base" : "text-sm"}`}>
+        {isKidVariant
+          ? "Toque, fale e escute a resposta."
+          : "Fale naturalmente com a Livoz. Ela vai ouvir e responder por voz."}
       </p>
 
       <div className="mt-5 rounded-[24px] bg-white/15 p-4 text-center">
-        <p className="font-title text-2xl font-extrabold">{statusLabel(status)}</p>
-        {transcript ? <p className="mt-3 text-sm text-white/85">Você disse: {transcript}</p> : null}
-        {replyText ? <p className="mt-2 text-sm text-white/85">Livoz: {replyText}</p> : null}
+        <p className={`font-title font-extrabold ${isKidVariant ? "text-3xl leading-tight" : "text-2xl"}`}>
+          {statusLabel(status, variant)}
+        </p>
+        {transcript && !isKidVariant ? <p className="mt-3 text-sm text-white/85">Você disse: {transcript}</p> : null}
+        {replyText ? (
+          <p className={`mt-3 font-bold text-white/90 ${isKidVariant ? "text-lg leading-7" : "text-sm"}`}>
+            {isKidVariant ? replyText : `Livoz: ${replyText}`}
+          </p>
+        ) : null}
         {message ? <p className="mt-3 text-sm font-bold text-yellow-100">{message}</p> : null}
       </div>
 
@@ -487,7 +508,7 @@ export function LiveVoiceConversation({
         </div>
       ) : null}
 
-      {fallbackVisible ? (
+      {fallbackVisible && !isKidVariant ? (
         <div className="mt-4 rounded-[22px] bg-white p-4 text-livoz-navy">
           <p className="text-sm font-bold leading-6">Não consegui iniciar a conversa ao vivo agora.</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -520,7 +541,9 @@ export function LiveVoiceConversation({
           <button
             type="button"
             onClick={() => void startLiveConversation()}
-            className="rounded-[22px] bg-white px-5 py-4 text-lg font-extrabold text-livoz-blue shadow-card"
+            className={`rounded-[22px] bg-white px-5 font-extrabold text-livoz-blue shadow-card ${
+              isKidVariant ? "min-h-24 text-2xl" : "py-4 text-lg"
+            }`}
           >
             🎙️ Conversar com a Livoz
           </button>
