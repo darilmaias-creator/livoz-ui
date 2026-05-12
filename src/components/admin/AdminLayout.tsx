@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -32,14 +33,9 @@ export function AdminLayout({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white px-4 py-5 lg:block">
-        <Link href="/admin/dashboard" className="flex items-center gap-3 px-2">
-          <span className="grid h-12 w-12 place-items-center rounded-[18px] bg-gradient-to-br from-livoz-blue to-livoz-cyan text-2xl font-extrabold text-white">
-            L
-          </span>
-          <span>
-            <span className="block font-title text-xl font-extrabold text-livoz-navy">Livoz Admin</span>
-            <span className="text-xs font-bold text-slate-500">Gestão da plataforma</span>
-          </span>
+        <Link href="/admin/dashboard" className="block px-2">
+          <BrandLogo className="max-w-[220px]" />
+          <span className="mt-2 block text-xs font-bold text-slate-500">Gestão da plataforma</span>
         </Link>
 
         <nav className="mt-8 grid gap-1">

@@ -1,0 +1,26 @@
+{
+  "name": "Livoz",
+  "short_name": "Livoz",
+  "description": "Cada palavra, uma nova descoberta.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7FBFF",
+  "theme_color": "#1E73F8",
+  "icons": [
+    {
+      "src": "/brand/android-chrome-2000x2000.png",
+      "sizes": "2000x2000",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/android-chrome-3000x3000.png",
+      "sizes": "3000x3000",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/icon-main.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

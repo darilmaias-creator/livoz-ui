@@ -3,8 +3,14 @@ import { KidModeRouteGuard } from "@/components/KidModeRouteGuard";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Livoz | Cada palavra, uma nova descoberta.",
-  description: "Plataforma infantil de aprendizagem de idiomas.",
+  title: "Livoz",
+  description: "Cada palavra, uma nova descoberta.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/brand/icon-main.png",
+    shortcut: "/brand/icon-main.png",
+    apple: "/brand/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
